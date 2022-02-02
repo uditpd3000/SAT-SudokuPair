@@ -4,13 +4,18 @@ import os
 import random
 from textwrap import fill
 from attr import field
+import timeit
 
 from keyring import set_keyring
 from numpy import sort
+from pysat.solvers import Solver
 sud = []
+sol=Solver()
 
 
-K = int(input("Enter the value of k:"))
+K = int(input("Enter the value of k:")) # to take the input
+start=timeit.default_timer()
+
 k_square=K**2
 num_of_boxes=K**4
 
@@ -49,73 +54,22 @@ def location(proposition):
 
 def encode(clauses,filled,restricted):
     
-    if(restricted==[]):
-        ad=0
-    else:
-        ad=1
-    input_file=open('clauses.txt','w')
-    input_file.write('p cnf '+str((K**6)*2)+' '+str(len(clauses)+len(filled)+ad)+'\n')
+    
+    clau=[]                                        #it will contain all the clauses
+    
     for x in filled:
+         clau.append([x])
         
-        
-        input_file.write(str(x)+" "+"0\n")
-   
-    for x in clauses:
-        strin=""   
-        for y in x:
-            strin=strin+" "+str(y)
-        input_file.write(strin+" "+"0\n")
-
-    strin=""
     
-    
-    strin=""
+    clau=clau+clauses
+       
     if(restricted==[]):
         pass
-    else:
-        for x in restricted:
-           strin=strin+ " " +str(x)
-        
-    
-        input_file.write(strin+" "+"0\n")
-
-    input_file.close
-
-#To get to know whether there exist unique soln to the sudokus or not
-
-def is_soln_unique(prop,filled) :
-    
-    encode(prop,filled,[])
-    os.system("minisat clauses.txt minisat_out.txt")
-    restricted=[]
-    with open('minisat_out.txt','r') as mini_out:
-        x=mini_out.readlines()
-        if(x[0]=='UNSAT\n'):
-            return -1                         # if there is no soln at all it will return -1
-        y=x[1].split()
-        for i in range(len(y)):
-            if(int(y[i])>0):
-                restricted.append(-1*int(y[i]))
-        encode(prop,filled,restricted)
-        os.system("minisat clauses.txt minisat_out.txt")
-        with open('minisat_out.txt','r') as mini_out:
-            x=mini_out.readlines()
-            if(x[0]=='UNSAT\n'):
-                return 1                      # if there is unique soln it returns 1 and if more than 1 then it returns 0
-            else:
-                return 0
-
-
-
-
-
-       
-
-sudoku=-1
-row=-1
-col=-1
-box=-1
-num=-1
+    else: 
+        clau.append(restricted)
+           
+    return clau
+           
 
 filled=[]
 clauses=[]
@@ -162,6 +116,8 @@ for i in range(k_square):
             temp1.append(i*num_of_boxes+l*k_square+j+1+(k_square*num_of_boxes))
         clauses.append(temp)
         clauses.append(temp1)
+
+
 #4 each column should have evex[1]ry value from 1 to k^2
 
 for i in range(k_square):
@@ -191,6 +147,7 @@ for i in range(K):
             clauses.append(temp1
             )
 # no digit should come more than once in a row
+
 for i in range(k_square):
     for j in range(k_square):
         
@@ -233,6 +190,7 @@ for i in range(k_square):
                 
             
 # no digit shoul dmcome more than once in a sub box
+
 for l in range(k_square):
     for i in range(K):
         for j in range(K):
@@ -274,34 +232,36 @@ for i in range(k_square*num_of_boxes*2) :
 #after randomly filling a box there will be many propositins which cannot be true to satisfy the sudoku coditions 
 #unvailable will store the number of those proposotions and we will remove those numbers from availables list
 
+sudoku=-1
+row=-1
+col=-1
+box=-1
+num=-1
+
+
 unavailable=0
 while(counter<K*K):
-    counter+=1
-    if unavailable==k_square*num_of_boxes*2-1 or availables==[]:   #if there is nothing left to select from 
-        break
-
+    
     y = random.randrange(1, num_of_boxes*k_square*2-unavailable)
     selected = availables[y]
     availables.pop(y)
     unavailable=unavailable+1
     
-    filled.append(selected)                               # we fill the randomly selected box with anny random digit
-    sudoku, row, col, box, num = location(selected)
+    filled.append(selected)                               # we fill the randomly selected box with any random digit
+    sudoku, row, col, box, num = location(selected)       # to get the detail of the literal selected
     
-    if is_soln_unique(clauses,filled) == 1:               # if we get unique soln then break from the loop 
-           break
-    elif(is_soln_unique(clauses,filled) == 0):            # else fill some more boxes to increase the randomness
-        if(sud==1):
+    # first we will use the condition that both sudokus will not have same digit in any box
+    if(sud==1):
             if(selected+k_square*num_of_boxes in availables):
-                availables.remove(selected+k_square*num_of_boxes) # first we will use the case that both sudokus will not have same digit in any box
+                availables.remove(selected+k_square*num_of_boxes) 
                 unavailable+=1
                 
-        else:
+    else:
             if(selected-num_of_boxes*k_square in availables):
                 availables.remove(selected-num_of_boxes*k_square)
                 unavailable+=1
                
-        for i in range(k_square):
+    for i in range(k_square):
             # now we will use the fact that one row cannot have same digit more than once
 
             if((col-1)*k_square+num+i*num_of_boxes+(sudoku-1)*k_square*num_of_boxes in availables):
@@ -320,62 +280,80 @@ while(counter<K*K):
                 availables.remove(floor(((selected-1)/k_square))*k_square+1+i)
                 unavailable+=1
                 
-        row_st= floor(((box-1)/K))*K+1
-        col_st= int(((box-1)%K)*K+1)
+    row_st= floor(((box-1)/K))*K+1
+    col_st= int(((box-1)%K)*K+1)
        
 
         #now we will use the fact that one subbox cannot have same digit more than once
-        for i in range(K):
+    for i in range(K):
                 for j in range(K):
                     if ((sudoku-1)*k_square*num_of_boxes+(i+row_st)*num_of_boxes+(j+col_st)*k_square+num in availables):
                         availables.remove((sudoku-1)*k_square*num_of_boxes+(i+row_st)*num_of_boxes+(j+col_st)*k_square+num)
                         unavailable+=1
+    clauses_list=encode(clauses,filled,[])
+
+    
+    sol1=Solver()            # if the filled boxes somehow doesnot provide any solution we will empty the last box which we filled
+    sol1.append_formula(clauses_list)
+    if(sol1.solve()==False):
+        filled.remove(selected)
+    sol1.delete()
+
+    counter+=1
                        
-    else:
-            filled.pop(len(filled)-1)
-            if selected in availables:
-                availables.remove(selected)
+    
 
-
-# now we will solve the sudoku based on those filled values and in restricted we will append the soln which we get at this point
+# now we will solve the sudoku based on those filled values 
 
 restricted=[]
-encode(clauses,filled,[])
-os.system("minisat clauses.txt minisat_out.txt")
-file=open('minisat_out.txt','r')
-f=file.readlines()
-if(f[0]=='SAT\n'):
-    y=f[1].split()
+clauses_list=encode(clauses,filled,[])
+
+sol.delete()
+sol1=Solver()
+sol1.append_formula(clauses_list)
+sol1.solve()
+x=sol1.get_model()
+# print(x)
+
+
+
+
 
 filled=[]
-for i in range(len(y)):
-    if(int(y[i])>0):
-        filled.append(int(y[i]))
-        restricted.append(-1*int(y[i]))
+
+#now we will append the negation of the model to the list of clauses which we will get from pysat to check multiple solutions.
+
+for i in range(len(x)):
+    if(int(x[i])>0):
+        filled.append(int(x[i]))
+        restricted.append(-1*int(x[i]))
 
 l=0
 ans=[]
 
 filled1=[]
+random.shuffle(filled)                                # we will randomly shuffle the literals which are true
 
-length=len(filled)
-ind=0
-removed=0
+length=len(filled) 
+
+clauses_list=encode(clauses,filled+filled1,restricted)
 for i in range(length):
     
-    x=random.choice(filled)  
-    filled.remove(x)   
-
-    encode(clauses,filled+filled1,restricted)
-    os.system("minisat clauses.txt minisat_out.txt")
-    with open('minisat_out.txt','r') as filename:
-        z=filename.readlines()
-    if(z[0]=='SAT\n'):
+    
+    x=filled.pop(0)                                   # we will empty a box and check if there exists another solution to this sudoku pair,
+    clauses_list.remove([x])
+    sol.delete()       
+    sol=Solver()
+    sol.append_formula(clauses_list)
+    
+    sol.solve()
+  
+   
+    if(sol.solve()):                                   # if there exist another solution after emptying a box we will refill it to maintain the uniqueness
         filled1.append(x)
+        clauses_list.append([x])
         
-        
-    else:
-        removed+=1
+
         
         
 filled=filled1
@@ -384,7 +362,7 @@ filled.sort()
 
 l=0
 ans=[]
-# for converting the minisat output to human readable form
+# for converting the pysat output to human readable form
 for i in range(k_square*2):
     temp=[]
     for j in range(k_square):
@@ -400,7 +378,7 @@ for i in range(k_square*2):
             temp.append(0)
     ans.append(temp)
 
-# for writing the sudoku to csv file
+# # for writing the sudoku to csv file
 
 f=open('output.csv','w')
 
@@ -408,20 +386,5 @@ writer=csv.writer(f)
 
 for i in range(k_square*2):
     writer.writerow(ans[i])
-
-
-    
-
-
-
-
-            
-
-
-
-
-
-
-
-       
-
+end=timeit.default_timer()
+# print(end-start)

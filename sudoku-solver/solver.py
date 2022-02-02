@@ -1,9 +1,10 @@
 import pandas as pd
 from pysat.solvers import Solver
-import time
+import timeit
 import csv
 sol=Solver()
 a=int(input("Enter the value of k : "))
+
 n=a**2
 
 def val(num,row,col,dig): #returns position/variable number of every value, first n^3 terms for first sudoku, next n^3 for second
@@ -12,7 +13,7 @@ def val(num,row,col,dig): #returns position/variable number of every value, firs
     else:
         return int(n*n*n+(row-1)*n*n+(col-1)*n+dig)
 df=[]
-sud = open('ok1.csv','r')
+sud = open('input.csv','r')
 csvreader = csv.reader(sud,quoting=csv.QUOTE_NONNUMERIC)
 for row in csvreader:
     df.append(row)
@@ -85,6 +86,7 @@ for dig in range(1,n+1):
                             x.append([-1*val(2,(sqrow-1)*a+ind,(sqcol-1)*a+ind1,dig),-1*val(2,(sqrow-1)*a+ind2,(sqcol-1)*a+ind3,dig)])
 
 for clause in x:
+    
     sol.add_clause(clause)
 #print(sol.solve())
 if sol.solve():
@@ -94,7 +96,7 @@ if sol.solve():
             for dig in range(1,n+1):
                 #if for a given cell, the variable corresponding to a particular digit is true, print that digit.
                 if ans[val(1,row,col,dig)-1]>0:
-                    print(dig,end="  ")
+                    print(dig,end=" ")
                     break
         print('\n')
     print('\n')
@@ -103,9 +105,10 @@ if sol.solve():
             for dig in range(1,n+1):
                 #if for a given cell, the variable corresponding to a particular digit is true, print that digit.
                 if ans[val(2,row,col,dig)-1]>0:
-                    print(dig,end="  ")
+                    print(dig,end=" ")
                     break
         print('\n')
 else:
     print(sol.get_model())
+
     
